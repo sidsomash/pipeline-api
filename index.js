@@ -28,4 +28,12 @@ app.post("/pipeline", async (req, res) => {
   res.json(newItem);
 });
 
+app.post("/migrate", async (req, res) => {
+  const raw = await fs.readFile("./data.json", "utf8");
+  const data = JSON.parse(raw);
+  
+  await fs.writeFile("./datastore2.json", JSON.stringify(data, null, 2));
+  res.json({ message: "Migration complete" });
+});
+
 app.listen(3000, () => console.log("API running on http://localhost:3000"));
