@@ -1,18 +1,19 @@
 import express from "express";
 import fs from "fs/promises";
+import enrichMigration from "./utils/enrichMigration.js";
 /**
- * @typedef {import("./models/Account")} Account
- * @typedef {import("./models/MigratedAccount")} MigratedAccount
- * @typedef {import("./models/TargetAccount")} TargetAccount
+ * @typedef {import("./models/Account.js")} Account
+ * @typedef {import("./models/MigratedAccount.js")} MigratedAccount
+ * @typedef {import("./models/TargetAccount.js")} TargetAccount
  */
 
 // Account model defines the base shape of items in data.json
 // MigratedAccount adds migration metadata fields
 // TargetAccount defines the shape stored in datastore2.json
 
-const Account = require("./models/Account");
-const MigratedAccount = require("./models/MigratedAccount");
-const TargetAccount = require("./models/TargetAccount");
+const Account = require("./models/Account.js");
+const MigratedAccount = require("./models/MigratedAccount.js");
+const TargetAccount = require("./models/TargetAccount.js");
 
 const app = express();
 app.use(express.json());
@@ -44,9 +45,18 @@ app.post("/pipeline", async (req, res) => {
 app.post("/migrate", async (req, res) => {
   const raw = await fs.readFile("./data.json", "utf8");
   const data = JSON.parse(raw);
+
+  // enrich
+  const migratedData = data.map(enrichMigration)
+
+  // Write enriched data to both datastores
+  await fs.writeFile("./datastore2.json", JSON.stringify(migratedData, null, 2));
+  await fs.writeFile("./data.json", JSON.stringify(migratedData, null, 2));
   
-  await fs.writeFile("./datastore2.json", JSON.stringify(data, null, 2));
-  res.json({ message: "Migration complete" });
+  res.json({
+    migrated_count: migratedData.length,
+    migrated: migratedData
+  });
 });
 
 app.listen(3000, () => console.log("API running on http://localhost:3000"));
