@@ -1,6 +1,8 @@
 import express from "express";
 import fs from "fs/promises";
 import enrichMigration from "./utils/enrichMigration.js";
+import chunk from "./utils/chunk.js";
+import getBatchSize from "./utils/getBatchSize.js";
 /**
  * @typedef {import("./models/Account.js")} Account
  * @typedef {import("./models/MigratedAccount.js")} MigratedAccount
@@ -42,20 +44,40 @@ app.post("/pipeline", async (req, res) => {
   res.json(newItem);
 });
 
+// POST migrate endpoint to start migration run of records present in data.json to datastore2.json
 app.post("/migrate", async (req, res) => {
   const raw = await fs.readFile("./data.json", "utf8");
   const data = JSON.parse(raw);
 
   // enrich
-  const migratedData = data.map(enrichMigration)
+  const enriched = data.map(enrichMigration)
+
+  // get batch size
+  const total = enriched.length
+  const BATCH_SIZE = getBatchSize(total, 10);
+
+  const batches = chunk(enriched, BATCH_SIZE);
+
+  const batchLogs = [];
+
+  for (let i = 0; i < batches.length; i++) {
+    batchLogs.push({
+      batch_id: i + 1, 
+      batch_size: batches[i].length,
+      status: "success",
+      timestamp: new Date().toISOString()
+    });
+  }
 
   // Write enriched data to both datastores
-  await fs.writeFile("./datastore2.json", JSON.stringify(migratedData, null, 2));
-  await fs.writeFile("./data.json", JSON.stringify(migratedData, null, 2));
+  await fs.writeFile("./datastore2.json", JSON.stringify(enriched, null, 2));
+  await fs.writeFile("./data.json", JSON.stringify(enriched, null, 2));
   
   res.json({
-    migrated_count: migratedData.length,
-    migrated: migratedData
+    migrated_count: enriched.length,
+    batch_size: BATCH_SIZE,
+    batch_count: batches.length,
+    batch_logs: batchLogs
   });
 });
 
