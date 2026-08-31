@@ -1,5 +1,6 @@
 import express from "express";
 import fs from "fs/promises";
+import enrichMigration from "./utils/enrichMigration.js";
 /**
  * @typedef {import("./models/Account.js")} Account
  * @typedef {import("./models/MigratedAccount.js")} MigratedAccount
@@ -44,9 +45,18 @@ app.post("/pipeline", async (req, res) => {
 app.post("/migrate", async (req, res) => {
   const raw = await fs.readFile("./data.json", "utf8");
   const data = JSON.parse(raw);
+
+  // enrich
+  const migratedData = data.map(enrichMigration)
+
+  // Write enriched data to both datastores
+  await fs.writeFile("./datastore2.json", JSON.stringify(migratedData, null, 2));
+  await fs.writeFile("./data.json", JSON.stringify(migratedData, null, 2));
   
-  await fs.writeFile("./datastore2.json", JSON.stringify(data, null, 2));
-  res.json({ message: "Migration complete" });
+  res.json({
+    migrated_count: migratedData.length,
+    migrated: migratedData
+  });
 });
 
 app.listen(3000, () => console.log("API running on http://localhost:3000"));
