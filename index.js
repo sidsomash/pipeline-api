@@ -1,18 +1,18 @@
 import express from "express";
 import fs from "fs/promises";
 /**
- * @typedef {import("./models/Account")} Account
- * @typedef {import("./models/MigratedAccount")} MigratedAccount
- * @typedef {import("./models/TargetAccount")} TargetAccount
+ * @typedef {import("./models/Account.js")} Account
+ * @typedef {import("./models/MigratedAccount.js")} MigratedAccount
+ * @typedef {import("./models/TargetAccount.js")} TargetAccount
  */
 
 // Account model defines the base shape of items in data.json
 // MigratedAccount adds migration metadata fields
 // TargetAccount defines the shape stored in datastore2.json
 
-const Account = require("./models/Account");
-const MigratedAccount = require("./models/MigratedAccount");
-const TargetAccount = require("./models/TargetAccount");
+const Account = require("./models/Account.js");
+const MigratedAccount = require("./models/MigratedAccount.js");
+const TargetAccount = require("./models/TargetAccount.js");
 
 const app = express();
 app.use(express.json());
